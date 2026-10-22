@@ -221,7 +221,14 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
 </script>
 <script>
 (function () {
-  const PEOPLE = [{ id: "clara", nombre: "Clara" }, { id: "matu", nombre: "Matu" }, { id: "santi", nombre: "Santi" }];
+  const PEOPLE = [
+    { id: "clara", nombre: "Clara", tel: "5491140823130" },
+    { id: "matu", nombre: "Matu", tel: "5491131904252" },
+    { id: "santi", nombre: "Santi", tel: "5491122920703" },
+  ];
+  // Link directo a un pedido: ?pedido=<id>
+  const linkPedido = (id) => location.origin + location.pathname + "?pedido=" + encodeURIComponent(id);
+  let abrirAlEntrar = new URLSearchParams(location.search).get("pedido");
   const NAME = Object.fromEntries(PEOPLE.map((p) => [p.id, p.nombre]));
   const ESTADO = { en_proceso: "En proceso", listo_para_pedir: "Listo para pedir", pendiente_pago: "Pendiente de pago", cerrado: "Cerrado" };
   const DEFAULT_CONFIG = { restaurante: "Anshus", telefono: "+54 9 11 3696-3284", entrega: "envio", direccion: "", aNombre: "Santi", menuTexto: "# Viandas\nAlbóndigas con arroz | 8000\nArrollado de carne | 8000\nArroz con pollo | 8000\nBifes a la criolla | 8000\nBondiola | 8000\nCanelones de carne y verdura | 8000\nCanelones de pollo | 8000\nCazuela de pollo | 8000\nChop suey de pollo | 8000\nCrep de calabaza | 8000\nCreps de espinaca | 8000\nGoulash | 8000\nLasagña | 8000\nLentejas | 8000\nMini hamburguesas con puré | 8000\nPastel de papas | 8000\nPollo al puerro con calabaza | 8000\nSalteado de pollo | 8000\nTallarines con brócoli | 8000\nTirabuzón con wok de vegetales | 8000\n# Tartas individuales\nTarta de choclo | 6000\nTarta de espinaca | 6000\nTarta de jamón y queso | 6000\nTarta de cebolla | 6000\nTarta de pollo, puerro y panceta | 6000\nTarta de calabaza y muzzarella | 6000\nTarta de zapallito | 6000" };
@@ -303,7 +310,8 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     db.doc("config/main").onSnapshot((s) => { state.config = { ...DEFAULT_CONFIG, ...(s.exists ? s.data() : {}) }; state.loaded = true; render(); }, onDbError);
     db.collection("pedidos").onSnapshot((s) => {
       const next = {}; for (const d of s.docs) next[d.id] = d.data();
-      state.pedidos = next; state.loaded = true; render();
+      state.pedidos = next; state.loaded = true;
+      if (!abrirDesdeLink()) render();
       for (const id in next) quizasAvanzar(id);
     }, onDbError);
   }
@@ -523,6 +531,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     let html = `<div class="section"><button class="back" id="volver">← Pedidos</button>
       <div class="ohead"><h2>${esc(titulo(p))}</h2><span class="pill ${p.estado}">${ESTADO[p.estado]}</span></div>`;
     if (p.estado === "en_proceso") {
+      html += avisoBlock(id, p);
       html += `<nav class="tabs" role="tablist"><button role="tab" data-tab="elegir" aria-selected="${state.tab === "elegir"}">Elegir lo mío</button><button role="tab" data-tab="resumen" aria-selected="${state.tab === "resumen"}">Pedido de todos</button></nav>`;
       html += state.tab === "elegir" ? viewElegir(id, p) : viewResumen(id, p);
     } else if (p.estado === "listo_para_pedir") html += viewListo(id, p);
@@ -612,6 +621,31 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     state.tab = "resumen"; render(); window.scrollTo({ top: 0 });
   }
 
+  // Abre el pedido del link una vez que se sabe quién es y llegaron los pedidos.
+  function abrirDesdeLink() {
+    if (!abrirAlEntrar || !state.me || !state.loaded) return false;
+    const id = abrirAlEntrar; abrirAlEntrar = null;
+    try { history.replaceState(null, "", location.pathname); } catch (e) {}
+    const p = state.pedidos[id]; if (!p) return false;
+    state.pedidoId = id; state.view = "pedido"; state.confirm = null; state.pagador = null;
+    state.tab = respuesta(p, state.me) ? "resumen" : "elegir";
+    render(); window.scrollTo({ top: 0 }); return true;
+  }
+
+  function avisoTexto(id, para) {
+    return `Hola ${NAME[para]}! ${NAME[state.me]} armó un pedido nuevo a ${local()}. Elegí lo tuyo (o marcá que no querés nada) acá: ${linkPedido(id)}`;
+  }
+
+  function avisoBlock(id, p) {
+    if (p.creadoPor !== state.me) return "";
+    const otros = PEOPLE.filter((x) => x.id !== state.me);
+    const avisados = p.avisados || {};
+    if (otros.every((x) => avisados[x.id])) return "";
+    return `<div class="confirm" style="border-color:var(--info)"><b>Avisale al resto que hay pedido nuevo</b>
+      <span class="hint">Se abre WhatsApp con el mensaje y el link al pedido; solo tenés que tocar enviar.</span>
+      <div class="row2">${otros.map((x) => `<a class="btn ${avisados[x.id] ? "" : "primary"}" data-avisar="${x.id}" href="https://wa.me/${x.tel}?text=${encodeURIComponent(avisoTexto(id, x.id))}" target="_blank" rel="noopener">${avisados[x.id] ? `Avisado a ${esc(x.nombre)} ✓` : `Avisar a ${esc(x.nombre)}`}</a>`).join("")}</div></div>`;
+  }
+
   async function nuevoPedido() {
     if (activo()) { toast("Ya hay un pedido abierto"); return; }
     const now = new Date();
@@ -623,7 +657,8 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   document.addEventListener("click", async (e) => {
     const t = e.target.closest("button, a"); if (!t) return;
     const id = state.pedidoId;
-    if (t.dataset.me) { state.me = t.dataset.me; state.view = "home"; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.dataset.me) { state.me = t.dataset.me; state.view = "home"; if (!abrirDesdeLink()) { render(); window.scrollTo({ top: 0 }); } return; }
+    if (t.dataset.avisar) { safe(pedidoRef(id).update({ avisados: { [t.dataset.avisar]: true } })); return; }
     if (t.id === "changeWho") { state.me = null; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
     if (t.id === "volver") { state.view = "home"; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
     if (t.id === "goConfig") { state.view = "config"; render(); window.scrollTo({ top: 0 }); return; }
