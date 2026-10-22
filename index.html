@@ -472,13 +472,13 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
       return `<div class="pay"><span class="n">${esc(x.nombre)}</span><span class="d ${r ? "" : "owe"}">${r === "listo" ? "Terminó su pedido ✓" : r === "nada" ? "No pide nada esta vez" : "Todavía no confirmó"}</span></div>`;
     }).join("") + `</div>`;
     html += ticket(id, p);
-    return html + (state.readOnly ? "" : discardBlock());
+    return html;
   }
 
   function viewListo(id, p) {
     const det = detalle(id);
     let html = ticket(id, p);
-    if (!conPedido(det).length) return html + `<div class="banner">Nadie pidió nada esta vez.</div>` + (state.readOnly ? "" : discardBlock());
+    if (!conPedido(det).length) return html + `<div class="banner">Nadie pidió nada esta vez.</div>`;
     const num = (state.config.telefono || "").replace(/\D/g, "");
     html += `<label class="toggle"><input type="checkbox" id="porPersona" ${state.porPersona ? "checked" : ""}> Separar el mensaje por persona</label>
       <h3>Mensaje para ${esc(local())}</h3><div class="preview" id="msg">${esc(mensaje(id))}</div>
@@ -521,8 +521,8 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   }
 
   function discardBlock() {
-    if (state.confirm === "descartar") return `<div class="confirm"><b>¿Descartar este pedido?</b><span class="hint">Se borra lo que eligió cada uno.</span><div class="row2"><button class="btn danger" id="descartarSi">Sí, descartar</button><button class="btn" id="cancelar">Cancelar</button></div></div>`;
-    return `<div class="foot"><button class="link" id="descartar">Descartar pedido</button></div>`;
+    if (state.confirm === "descartar") return `<div class="confirm" id="confirmDescartar"><b>¿Eliminar este pedido?</b><span class="hint">Se borra el pedido y lo que eligió cada uno. No se puede deshacer.</span><div class="row2"><button class="btn danger" id="descartarSi">Sí, eliminar</button><button class="btn" id="cancelar">Cancelar</button></div></div>`;
+    return `<button class="btn danger" id="descartar">Eliminar pedido</button>`;
   }
   function reopenBlock(label) {
     if (state.confirm === "reabrir") return `<div class="confirm"><b>¿Volver a abrir el pedido?</b><span class="hint">Vuelve a En proceso y cada uno tiene que confirmar de nuevo.</span><div class="row2"><button class="btn danger" id="reabrirSi">Sí, volver a abrir</button><button class="btn" id="cancelar">Cancelar</button></div></div>`;
@@ -541,6 +541,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     } else if (p.estado === "listo_para_pedir") html += viewListo(id, p);
     else if (p.estado === "pendiente_pago") html += viewPendiente(id, p);
     else html += `<div class="banner">${esc(NAME[p.pagador] || "")} recibió todos los pagos. Pedido cerrado.</div>` + ticket(id, p);
+    if ((p.estado === "en_proceso" || p.estado === "listo_para_pedir") && !state.readOnly) html += discardBlock();
     return html + `</div>`;
   }
 
@@ -701,10 +702,10 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
       catch (err) { const r = document.createRange(); r.selectNodeContents($("msg")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Seleccioné el texto: copialo desde el celular"); }
       return;
     }
-    if (t.id === "descartar") { state.confirm = "descartar"; render(); return; }
+    if (t.id === "descartar") { state.confirm = "descartar"; render(); const c = $("confirmDescartar"); if (c) c.scrollIntoView({ block: "center" }); return; }
     if (t.id === "reabrir") { state.confirm = "reabrir"; render(); return; }
     if (t.id === "cancelar") { state.confirm = null; render(); return; }
-    if (t.id === "descartarSi") { state.confirm = null; state.view = "home"; await safe(pedidoRef(id).delete()); render(); toast("Pedido descartado"); return; }
+    if (t.id === "descartarSi") { state.confirm = null; state.view = "home"; await safe(pedidoRef(id).delete()); render(); toast("Pedido eliminado"); return; }
     if (t.id === "reabrirSi") {
       state.confirm = null; state.tab = "elegir";
       await safe(pedidoRef(id).update({ estado: "en_proceso", respuestas: { clara: null, matu: null, santi: null } }));
