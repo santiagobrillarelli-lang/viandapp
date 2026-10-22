@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f7a4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ViandApp">
+<meta name="robots" content="noindex">
+<title>ViandApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna angosta tipo app de celular; el resumen se presenta como una comanda de papel. */
+:root {
+  --bg: #eef1ec;
+  --surface: #ffffff;
+  --ink: #1d2a24;
+  --muted: #5f6e66;
+  --line: #d5dcd6;
+  --accent: #1f7a4d;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefe3;
+  --paper: #fffdf6;
+  --warn: #a8461f;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121a16; --surface: #1b2520; --ink: #e6ede8; --muted: #9aaaa1; --line: #2e3b34;
+    --accent: #4cc387; --accent-ink: #0d1a13; --accent-soft: #1f3a2c; --paper: #232b24; --warn: #f08a5d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121a16; --surface: #1b2520; --ink: #e6ede8; --muted: #9aaaa1; --line: #2e3b34;
+  --accent: #4cc387; --accent-ink: #0d1a13; --accent-soft: #1f3a2c; --paper: #232b24; --warn: #f08a5d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.2rem; font-weight: 600; }
+h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-family: var(--font-body); font-weight: 600; }
+.sub { color: var(--muted); font-size: 0.92rem; margin: 2px 0 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.banner { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; }
+.banner[data-kind="warn"] { color: var(--warn); }
+
+/* Personas */
+.people { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px;
+  font-weight: 600; display: inline-flex; gap: 8px; align-items: center;
+}
+.chip .count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-weight: 400; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip[aria-pressed="true"] .count { color: var(--accent-ink); opacity: 0.85; }
+.chip.add { border-style: dashed; color: var(--muted); font-weight: 500; }
+.start { min-height: 70vh; display: flex; flex-direction: column; justify-content: center; gap: 22px; text-align: center; }
+.start h1 { font-size: 2.4rem; }
+.start .pick { display: flex; flex-direction: column; gap: 12px; }
+.start .pick button {
+  font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; padding: 18px; border-radius: 16px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.start .pick button:hover, .start .pick button:focus-visible { border-color: var(--accent); }
+.start .pick .count { display: block; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.whobar { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.whobar b { font-family: var(--font-display); font-size: 1.15rem; }
+.whobar button { border: 0; background: var(--accent-soft); color: var(--ink); border-radius: 999px; padding: 6px 14px; font-weight: 600; }
+
+/* Tabs */
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+.tabs button { border: 0; background: transparent; padding: 9px 4px; border-radius: 9px; font-weight: 600; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+
+/* Menú */
+.cat { display: flex; flex-direction: column; gap: 6px; }
+.items { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; }
+.item .name { font-weight: 500; min-width: 0; }
+.item .price { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.item.has .name { font-weight: 600; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.stepper button { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; font-size: 1.15rem; line-height: 1; display: grid; place-items: center; }
+.stepper button.plus { border-color: var(--accent); color: var(--accent); }
+.stepper .q { min-width: 22px; text-align: center; font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.stepper .q.zero { color: var(--muted); }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; color: var(--muted); }
+input[type="text"], input[type="tel"], textarea, select {
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 11px; color: var(--ink); width: 100%;
+}
+textarea { resize: vertical; }
+.mine { position: sticky; bottom: env(safe-area-inset-bottom, 0px); background: var(--ink); color: var(--bg); border-radius: 14px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mine b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.mine button { background: var(--bg); color: var(--ink); border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 600; }
+
+/* Comanda */
+.ticket {
+  background: var(--paper); font-family: var(--font-mono); font-size: 0.9rem; padding: 20px 18px 24px; position: relative;
+  border: 1px solid var(--line); border-radius: 4px;
+  --tooth: 8px;
+  -webkit-mask: radial-gradient(circle var(--tooth) at 50% 100%, transparent 98%, #000) 50% 100% / calc(var(--tooth) * 2.4) 51% repeat-x,
+                linear-gradient(#000, #000) top / 100% 51% no-repeat;
+          mask: radial-gradient(circle var(--tooth) at 50% 100%, transparent 98%, #000) 50% 100% / calc(var(--tooth) * 2.4) 51% repeat-x,
+                linear-gradient(#000, #000) top / 100% 51% no-repeat;
+  padding-bottom: 30px;
+}
+.ticket .head { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.ticket .head strong { font-family: var(--font-display); font-size: 1.15rem; }
+.ticket hr { border: 0; border-top: 1.5px dashed var(--line); margin: 12px 0; }
+.ticket .row { display: grid; grid-template-columns: 2.4em 1fr auto; gap: 6px; font-variant-numeric: tabular-nums; }
+.ticket .who { grid-column: 2 / 4; color: var(--muted); font-size: 0.8rem; margin-top: -2px; margin-bottom: 4px; }
+.ticket .total { display: flex; justify-content: space-between; font-weight: 500; font-size: 1rem; }
+.ticket .note { color: var(--muted); font-size: 0.82rem; }
+.ticket .empty { text-align: center; color: var(--muted); padding: 10px 0; }
+.perperson { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.perperson div { display: flex; justify-content: space-between; gap: 8px; }
+
+.preview { white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 0.9rem; max-height: 260px; overflow: auto; }
+.actions { display: flex; flex-direction: column; gap: 10px; }
+.btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; border-radius: 12px; padding: 12px 16px; font-weight: 600; border: 1.5px solid var(--line); background: var(--surface); text-decoration: none; color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-size: 1.05rem; }
+.btn.danger { color: var(--warn); }
+.btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+.row2 { display: flex; gap: 10px; flex-wrap: wrap; }
+.row2 > * { flex: 1 1 160px; }
+.toggle { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+.confirm { background: var(--surface); border: 1.5px solid var(--warn); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.section { display: flex; flex-direction: column; gap: 12px; }
+.hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+code { font-family: var(--font-mono); font-size: 0.85em; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 0.9rem; z-index: 20; }
+.emptystate { text-align: center; color: var(--muted); padding: 28px 12px; background: var(--surface); border: 1.5px dashed var(--line); border-radius: 12px; }
+@media (prefers-reduced-motion: no-preference) { .chip, .tabs button, .stepper button { transition: background .15s, color .15s, border-color .15s; } }
+:root { --info: #2f5f9e; --info-soft: #e0e9f6; --warn-soft: #f8e6dc; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --info: #8fb4ea; --info-soft: #1f2b3d; --warn-soft: #3a261d; } }
+:root[data-theme="dark"] { --info: #8fb4ea; --info-soft: #1f2b3d; --warn-soft: #3a261d; }
+.tabs { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.en_proceso { background: var(--info-soft); color: var(--info); }
+.pill.listo_para_pedir { background: var(--accent); color: var(--accent-ink); }
+.pill.pendiente_pago { background: var(--warn-soft); color: var(--warn); }
+.pill.cerrado { background: var(--accent-soft); color: var(--accent); }
+.orders { display: flex; flex-direction: column; gap: 10px; }
+.order { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; text-align: left; width: 100%;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; color: var(--ink); }
+.order.live { border: 1.5px solid var(--info); }
+.order .t { font-weight: 600; }
+.order .amt { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.order .meta { grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); }
+.order .meta b { color: var(--warn); font-weight: 600; }
+.back { align-self: flex-start; border: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 4px 0; }
+.ohead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pays { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.pay { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); }
+.pay:first-child { border-top: 0; }
+.pay .n { font-weight: 600; }
+.pay .d { font-size: 0.85rem; color: var(--muted); grid-column: 1; }
+.pay .d.owe { color: var(--warn); }
+.pay .act { grid-row: 1 / span 2; grid-column: 2; }
+.pay .act button { border-radius: 999px; padding: 7px 12px; font-weight: 600; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); }
+.pay .act button.done { background: var(--accent); color: var(--accent-ink); }
+.order .meta.amt { font-family: var(--font-mono); color: var(--ink); }
+.mine.mine-col { flex-direction: column; align-items: stretch; }
+.mine .row2 button { padding: 10px 12px; border-radius: 10px; }
+.mine .go { background: var(--accent); color: var(--accent-ink); }
+.mine .go:disabled { opacity: 0.45; }
+.mine .nada { background: transparent; color: var(--bg); border: 1.5px solid var(--bg); }
+.foot { display: flex; justify-content: center; }
+.link { border: 0; background: transparent; color: var(--muted); text-decoration: underline; font-size: 0.9rem; padding: 6px; }
+</style>
+</head>
+<body>
+
+<div class="wrap start" id="start">
+  <div><h1>¿Quién sos?</h1><p class="sub">Elegí tu nombre para entrar.</p></div>
+  <div class="pick" id="pick"></div>
+</div>
+<div class="wrap" id="app" hidden>
+  <header>
+    <h1 id="title">ViandApp</h1>
+    <p class="sub">Pedidos de la familia a la casa de comidas.</p>
+  </header>
+  <div class="whobar"><span>Hola, <b id="whoName"></b></span><button id="changeWho">Cambiar</button></div>
+  <div id="banner" class="banner" hidden></div>
+  <main id="view"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // Datos del proyecto de Firebase (Configuración del proyecto → Tus apps → Web).
+  window.FIREBASE_CONFIG = {
+    apiKey: "PEGAR_API_KEY",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: "",
+  };
+</script>
+<script>
+(function () {
+  const PEOPLE = [{ id: "clara", nombre: "Clara" }, { id: "matu", nombre: "Matu" }, { id: "santi", nombre: "Santi" }];
+  const NAME = Object.fromEntries(PEOPLE.map((p) => [p.id, p.nombre]));
+  const ESTADO = { en_proceso: "En proceso", listo_para_pedir: "Listo para pedir", pendiente_pago: "Pendiente de pago", cerrado: "Cerrado" };
+  const DEFAULT_CONFIG = { restaurante: "Anshus", telefono: "+54 9 11 3696-3284", entrega: "envio", direccion: "", aNombre: "Santi", menuTexto: "# Viandas\nAlbóndigas con arroz | 8000\nArrollado de carne | 8000\nArroz con pollo | 8000\nBifes a la criolla | 8000\nBondiola | 8000\nCanelones de carne y verdura | 8000\nCanelones de pollo | 8000\nCazuela de pollo | 8000\nChop suey de pollo | 8000\nCrep de calabaza | 8000\nCreps de espinaca | 8000\nGoulash | 8000\nLasagña | 8000\nLentejas | 8000\nMini hamburguesas con puré | 8000\nPastel de papas | 8000\nPollo al puerro con calabaza | 8000\nSalteado de pollo | 8000\nTallarines con brócoli | 8000\nTirabuzón con wok de vegetales | 8000\n# Tartas individuales\nTarta de choclo | 6000\nTarta de espinaca | 6000\nTarta de jamón y queso | 6000\nTarta de cebolla | 6000\nTarta de pollo, puerro y panceta | 6000\nTarta de calabaza y muzzarella | 6000\nTarta de zapallito | 6000" };
+
+  const fmt = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+  const money = (n) => fmt.format(n || 0);
+  const slug = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "x";
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fecha = (iso, opts) => { const d = new Date(iso); return opts ? d.toLocaleDateString("es-AR", opts) : `${d.toLocaleDateString("es-AR", { weekday: "long" })} ${d.getDate()}/${d.getMonth() + 1}`; };
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    config: { ...DEFAULT_CONFIG },
+    pedidos: {},              // id -> pedido
+    overrides: {},            // "pedido|persona" -> items (cambios aún no guardados)
+    loaded: false,
+    me: null,
+    view: "home",             // home | pedido | config
+    pedidoId: null,
+    tab: "elegir",            // elegir | resumen
+    porPersona: ls.get("viandapp.porPersona") === "1",
+    confirm: null,            // "descartar" | "reabrir"
+    pagador: null,
+    readOnly: false,
+  };
+
+  // ---------- Menú: texto -> lista ----------
+  function parseMenu(text) {
+    const out = []; let cat = "Menú"; const seen = new Set();
+    for (const raw of (text || "").split("\n")) {
+      const line = raw.trim(); if (!line) continue;
+      if (line.startsWith("#")) { cat = line.replace(/^#+/, "").trim() || "Menú"; continue; }
+      const m = line.match(/^(.*?)\s*[|\-–—:]\s*\$?\s*([\d.,]+)\s*$/);
+      let name = line, price = 0;
+      if (m && m[1].trim()) { name = m[1].trim(); price = Number(m[2].replace(/\./g, "").replace(",", ".")) || 0; }
+      let key = slug(name); while (seen.has(key)) key += "-2"; seen.add(key);
+      out.push({ key, name, price, cat });
+    }
+    return out;
+  }
+  const menu = () => parseMenu(state.config.menuTexto);
+
+  // ---------- Datos ----------
+  // Almacén local con la misma forma que db, para cuando no hay datos compartidos.
+  function localDb() {
+    let data = {}; try { data = JSON.parse(ls.get("viandapp.local") || "{}"); } catch (e) {}
+    const subs = [];
+    const save = () => { ls.set("viandapp.local", JSON.stringify(data)); subs.forEach((f) => f()); };
+    const merge = (a, b) => { const o = { ...a }; for (const k in b) o[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) && a && typeof a[k] === "object" ? merge(a[k], b[k]) : b[k]; return o; };
+    const snap = (id, v) => ({ id, exists: !!v, data: () => v });
+    return {
+      doc(path) {
+        return {
+          async set(v) { data[path] = v; save(); },
+          async update(v) { data[path] = merge(data[path] || {}, v); save(); },
+          async delete() { delete data[path]; save(); },
+          onSnapshot(cb) { const f = () => cb(snap(path.split("/")[1], data[path])); subs.push(f); setTimeout(f); return () => {}; },
+        };
+      },
+      collection(name) {
+        return {
+          onSnapshot(cb) {
+            const f = () => cb({ docs: Object.keys(data).filter((k) => k.startsWith(name + "/")).map((k) => snap(k.split("/")[1], data[k])) });
+            subs.push(f); setTimeout(f); return () => {};
+          },
+        };
+      },
+    };
+  }
+
+  let db = null;
+  const timers = {};
+
+  function start() {
+    db.doc("config/main").onSnapshot((s) => { state.config = { ...DEFAULT_CONFIG, ...(s.exists ? s.data() : {}) }; state.loaded = true; render(); }, onDbError);
+    db.collection("pedidos").onSnapshot((s) => {
+      const next = {}; for (const d of s.docs) next[d.id] = d.data();
+      state.pedidos = next; state.loaded = true; render();
+      for (const id in next) quizasAvanzar(id);
+    }, onDbError);
+  }
+  const pedidoRef = (id) => db.doc("pedidos/" + id);
+  function onDbError() { showBanner("Se cortó la conexión con los datos. Recargá la página.", "warn"); }
+
+  async function safe(promise) {
+    try { await promise; return true; } catch (e) {
+      console.error(e);
+      toast(e && e.code === "permission-denied" ? "La base de datos no permite guardar. Revisá las reglas de Firebase." : "No se pudo guardar. Revisá la conexión y probá de nuevo.");
+      return false;
+    }
+  }
+
+  // ---------- Derivados ----------
+  function itemsOf(pedido, id, pid) {
+    const ov = state.overrides[id + "|" + pid];
+    const src = ov || (pedido.items && pedido.items[pid]) || {};
+    const out = {}; for (const k in src) if (src[k] > 0) out[k] = src[k];
+    return out;
+  }
+  const countItems = (items) => Object.values(items).reduce((s, q) => s + q, 0);
+  const lista = () => Object.entries(state.pedidos).sort((a, b) => String(b[1].creado).localeCompare(String(a[1].creado)));
+  const activo = () => lista().find(([, p]) => p.estado === "en_proceso" || p.estado === "listo_para_pedir");
+  const respuesta = (p, pid) => (p.respuestas || {})[pid] || null;   // "listo" | "nada" | null
+  const todosRespondieron = (p) => PEOPLE.every(({ id }) => respuesta(p, id));
+
+  // Detalle por persona: en proceso usa el menú actual; después, la foto guardada al quedar listo.
+  function detalle(id) {
+    const p = state.pedidos[id];
+    if (p.estado !== "en_proceso" && p.detalle) return p.detalle;
+    const byKey = Object.fromEntries(menu().map((i) => [i.key, i]));
+    const out = {};
+    for (const { id: pid } of PEOPLE) {
+      const its = respuesta(p, pid) === "nada" ? {} : itemsOf(p, id, pid);
+      out[pid] = Object.entries(its).filter(([k]) => byKey[k]).map(([k, q]) => ({ key: k, name: byKey[k].name, qty: q, price: byKey[k].price }));
+    }
+    return out;
+  }
+  const subtotal = (lines) => (lines || []).reduce((s, l) => s + l.qty * l.price, 0);
+  function lineas(det) {
+    const map = new Map();
+    for (const { id: pid } of PEOPLE) for (const l of det[pid] || []) {
+      const e = map.get(l.key) || { ...l, qty: 0, who: [] };
+      e.qty += l.qty; e.who.push(l.qty > 1 ? `${NAME[pid]} ×${l.qty}` : NAME[pid]); map.set(l.key, e);
+    }
+    const order = menu().map((i) => i.key);
+    return [...map.values()].sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999));
+  }
+  const conPedido = (det) => PEOPLE.filter(({ id }) => (det[id] || []).length);
+  const totalDe = (det) => conPedido(det).reduce((s, x) => s + subtotal(det[x.id]), 0);
+  const local = () => state.config.restaurante || "la casa de comidas";
+
+  function mensaje(id) {
+    const c = state.config; const det = detalle(id); const ls_ = lineas(det);
+    if (!ls_.length) return "";
+    let t = "Hola! Quería hacer un pedido:\n\n";
+    if (state.porPersona) {
+      for (const { id: pid, nombre } of conPedido(det)) t += `*${nombre}*\n` + det[pid].map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
+    } else t += ls_.map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
+    if (c.entrega === "retiro") t += "Pasamos a retirar.";
+    else t += c.direccion ? `Para enviar a: ${c.direccion}` : "Es para envío.";
+    if (c.aNombre) t += `\nA nombre de: ${c.aNombre}`;
+    return t + "\n\n¡Gracias!";
+  }
+  function waLink(id) {
+    const num = (state.config.telefono || "").replace(/\D/g, "");
+    return `https://wa.me/${num}?text=${encodeURIComponent(mensaje(id))}`;
+  }
+  const deben = (p, det) => conPedido(det).filter(({ id }) => id !== p.pagador);
+
+  // ---------- Vistas ----------
+  const titulo = (p) => "Pedido del " + fecha(p.creado);
+
+  function estadoPersona(p, id, pid) {
+    const r = respuesta(p, pid);
+    if (r === "listo") return "terminó";
+    if (r === "nada") return "no pide";
+    return countItems(itemsOf(p, id, pid)) ? "eligiendo" : "sin elegir";
+  }
+
+  function viewHome() {
+    if (!state.loaded) return `<div class="emptystate">Cargando pedidos…</div>`;
+    let html = `<div class="section">`;
+    if (!activo()) html += state.readOnly ? "" : `<button class="btn primary" id="nuevo">+ Nuevo pedido</button>`;
+    else html += `<p class="hint">Hay un pedido abierto. Cuando se haga vas a poder empezar otro.</p>`;
+    const all = lista();
+    if (!all.length) html += `<div class="emptystate"><h2>Todavía no hay pedidos</h2><p>Creá el primero y cada uno elige lo suyo.</p></div>`;
+    else {
+      html += `<h3>Pedidos</h3><div class="orders">`;
+      for (const [id, p] of all) {
+        const det = detalle(id); const total = p.total ?? totalDe(det);
+        let meta = "";
+        if (p.estado === "en_proceso") {
+          meta = PEOPLE.map((x) => `${x.nombre}: ${estadoPersona(p, id, x.id)}`).join(" · ");
+          if (!respuesta(p, state.me)) meta += ` · <b>Te falta confirmar</b>`;
+        } else if (p.estado === "listo_para_pedir") {
+          meta = `Todos confirmaron. Falta hacerle el pedido a ${esc(local())}.`;
+        } else if (p.estado === "pendiente_pago") {
+          const yo = deben(p, det).find((x) => x.id === state.me);
+          if (yo) meta = `<b>Transferile ${money(subtotal(det[state.me]))} a ${esc(NAME[p.pagador])}</b>`;
+          else if (p.pagador === state.me) meta = `<b>Te tienen que transferir: ${esc(deben(p, det).map((x) => `${x.nombre} ${money(subtotal(det[x.id]))}`).join(", "))}</b>`;
+          else meta = `Pagó ${esc(NAME[p.pagador])}. Esperando las transferencias.`;
+        } else meta = `Pagó ${esc(NAME[p.pagador] || "")} · todos saldados`;
+        html += `<button class="order ${p.estado === "en_proceso" || p.estado === "listo_para_pedir" ? "live" : ""}" data-open="${id}">
+          <span class="t">${esc(titulo(p))}</span><span class="pill ${p.estado}">${ESTADO[p.estado]}</span>
+          <span class="meta">${meta}</span>${total ? `<span class="meta amt">${money(total)}</span>` : ""}</button>`;
+      }
+      html += `</div>`;
+    }
+    html += `<div class="foot"><button class="link" id="goConfig">Menú y datos de ${esc(local())}</button></div></div>`;
+    return html;
+  }
+
+  function viewElegir(id, p) {
+    const items = menu();
+    if (!items.length) return `<div class="emptystate"><h2>Todavía no hay menú</h2><p>Cargalo en Menú y datos.</p></div>`;
+    const mine = itemsOf(p, id, state.me);
+    const r = respuesta(p, state.me);
+    const locked = state.readOnly || !!r;
+    let html = "";
+    if (r) html += `<div class="confirm" style="border-color:var(--accent)"><b>${r === "listo" ? "Ya confirmaste tu pedido ✓" : "Marcaste que esta vez no pedís nada"}</b><span class="hint">Cuando los tres confirmen, el pedido pasa a Listo para pedir.</span>${state.readOnly ? "" : `<button class="btn" id="desconfirmar">Cambiar lo mío</button>`}</div>`;
+    for (const cat of [...new Set(items.map((i) => i.cat))]) {
+      html += `<div class="cat"><h3>${esc(cat)}</h3><div class="items">`;
+      for (const it of items.filter((i) => i.cat === cat)) {
+        const q = r === "nada" ? 0 : mine[it.key] || 0;
+        html += `<div class="item ${q ? "has" : ""}"><div class="name">${esc(it.name)}<div class="price">${it.price ? money(it.price) : "precio a confirmar"}</div></div>
+          <div class="stepper">${locked ? "" : `<button aria-label="Quitar ${esc(it.name)}" data-dec="${it.key}" ${q ? "" : "disabled"}>−</button>`}<span class="q ${q ? "" : "zero"}">${q}</span>${locked ? "" : `<button class="plus" aria-label="Agregar ${esc(it.name)}" data-inc="${it.key}">+</button>`}</div></div>`;
+      }
+      html += `</div></div>`;
+    }
+    const det = detalle(id);
+    if (!locked) {
+      const n = countItems(mine);
+      html += `<div class="mine mine-col"><span>Lo tuyo: ${n} · <b>${money(subtotal(det[state.me]))}</b></span>
+        <div class="row2"><button class="go" id="terminar" ${n ? "" : "disabled"}>Terminé mi pedido</button><button class="nada" id="nada">No quiero nada</button></div></div>`;
+    }
+    return html;
+  }
+
+  function ticket(id, p) {
+    const det = detalle(id); const ls_ = lineas(det); const quienes = conPedido(det);
+    let t = `<div class="ticket"><div class="head"><strong>${esc(state.config.restaurante || "Casa de comidas")}</strong><span class="note">${esc(fecha(p.pedidoEn || p.creado, { weekday: "long", day: "numeric", month: "long" }))}</span></div><hr>`;
+    if (!ls_.length) t += `<div class="empty">Nadie eligió nada todavía.</div>`;
+    for (const l of ls_) t += `<div class="row"><span>${l.qty}×</span><span>${esc(l.name)}</span><span>${l.price ? money(l.qty * l.price) : "—"}</span><span class="who">${esc(l.who.join(", "))}</span></div>`;
+    t += `<hr><div class="total"><span>TOTAL</span><span>${money(totalDe(det))}</span></div>`;
+    if (quienes.length) t += `<hr><div class="perperson">${quienes.map((x) => `<div><span>${esc(x.nombre)}</span><span>${money(subtotal(det[x.id]))}</span></div>`).join("")}</div>`;
+    return t + `</div>`;
+  }
+
+  function viewResumen(id, p) {
+    let html = `<h3>Quién confirmó</h3><div class="pays">` + PEOPLE.map((x) => {
+      const r = respuesta(p, x.id);
+      return `<div class="pay"><span class="n">${esc(x.nombre)}</span><span class="d ${r ? "" : "owe"}">${r === "listo" ? "Terminó su pedido ✓" : r === "nada" ? "No pide nada esta vez" : "Todavía no confirmó"}</span></div>`;
+    }).join("") + `</div>`;
+    html += ticket(id, p);
+    return html + (state.readOnly ? "" : discardBlock());
+  }
+
+  function viewListo(id, p) {
+    const det = detalle(id);
+    let html = ticket(id, p);
+    if (!conPedido(det).length) return html + `<div class="banner">Nadie pidió nada esta vez.</div>` + (state.readOnly ? "" : discardBlock());
+    const num = (state.config.telefono || "").replace(/\D/g, "");
+    html += `<label class="toggle"><input type="checkbox" id="porPersona" ${state.porPersona ? "checked" : ""}> Separar el mensaje por persona</label>
+      <h3>Mensaje para ${esc(local())}</h3><div class="preview" id="msg">${esc(mensaje(id))}</div>
+      <div class="actions">
+        <a class="btn primary" href="${esc(waLink(id))}" target="_blank" rel="noopener">1. Enviar por WhatsApp</a>
+        <button class="btn" id="copy">Copiar mensaje</button>
+        <p class="hint">WhatsApp se abre con el mensaje listo; revisalo y tocá enviar ahí.${num ? ` Número: <code>+${esc(num)}</code>` : ""}</p>
+      </div>`;
+    if (!state.readOnly) {
+      const pag = state.pagador || state.me;
+      html += `<div class="section confirm" style="border-color:var(--accent)">
+        <b>2. ¿Quién le pagó a ${esc(local())}?</b>
+        <label class="field">Pagó<select id="pagador">${PEOPLE.map((x) => `<option value="${x.id}" ${x.id === pag ? "selected" : ""}>${esc(x.nombre)}</option>`).join("")}</select></label>
+        <button class="btn primary" id="pagado">Confirmar pago</button>
+        <p class="hint">Al resto le va a aparecer cuánto le tiene que transferir a quien pagó.</p>
+      </div>` + reopenBlock("Volver a abrir para que cambien lo que eligieron");
+    }
+    return html;
+  }
+
+  function viewPendiente(id, p) {
+    const det = detalle(id); const lista_ = deben(p, det); const avisos = p.avisos || {};
+    let html = "";
+    const yo = lista_.find((x) => x.id === state.me);
+    if (yo) html += `<div class="confirm" style="border-color:var(--warn)"><b style="font-size:1.15rem">Transferile ${money(subtotal(det[state.me]))} a ${esc(NAME[p.pagador])}</b>
+        <span class="hint">${esc(NAME[p.pagador])} pagó todo el pedido a ${esc(local())}.</span>
+        ${state.readOnly ? "" : `<button class="btn" id="avise">${avisos[state.me] ? "Avisaste que ya transferiste ✓ (tocá para deshacer)" : "Ya le transferí"}</button>`}</div>`;
+    html += `<h3>Transferencias a ${esc(NAME[p.pagador])}</h3><div class="pays">`;
+    html += `<div class="pay"><span class="n">${esc(NAME[p.pagador])}</span><span class="d">Le pagó ${money(p.total)} a ${esc(local())}</span></div>`;
+    for (const x of lista_) html += `<div class="pay"><span class="n">${esc(x.nombre)}</span><span class="d ${avisos[x.id] ? "" : "owe"}">${avisos[x.id] ? "Avisó que transfirió" : "Tiene que transferir"} ${money(subtotal(det[x.id]))}</span></div>`;
+    for (const x of PEOPLE.filter((x) => x.id !== p.pagador && !lista_.includes(x))) html += `<div class="pay"><span class="n">${esc(x.nombre)}</span><span class="d">No pidió nada</span></div>`;
+    html += `</div>`;
+    if (p.pagador === state.me && !state.readOnly) {
+      html += state.confirm === "cerrar"
+        ? `<div class="confirm" style="border-color:var(--accent)"><b>¿Recibiste todas las transferencias?</b><div class="row2"><button class="btn primary" id="cerrarSi">Sí, cerrar pedido</button><button class="btn" id="cancelar">Cancelar</button></div></div>`
+        : `<button class="btn primary" id="cerrar">Recibí todos los pagos · Cerrar pedido</button>`;
+    } else if (!yo) html += `<p class="hint">Cuando ${esc(NAME[p.pagador])} reciba todas las transferencias, cierra el pedido.</p>`;
+    html += ticket(id, p);
+    return html;
+  }
+
+  function discardBlock() {
+    if (state.confirm === "descartar") return `<div class="confirm"><b>¿Descartar este pedido?</b><span class="hint">Se borra lo que eligió cada uno.</span><div class="row2"><button class="btn danger" id="descartarSi">Sí, descartar</button><button class="btn" id="cancelar">Cancelar</button></div></div>`;
+    return `<div class="foot"><button class="link" id="descartar">Descartar pedido</button></div>`;
+  }
+  function reopenBlock(label) {
+    if (state.confirm === "reabrir") return `<div class="confirm"><b>¿Volver a abrir el pedido?</b><span class="hint">Vuelve a En proceso y cada uno tiene que confirmar de nuevo.</span><div class="row2"><button class="btn danger" id="reabrirSi">Sí, volver a abrir</button><button class="btn" id="cancelar">Cancelar</button></div></div>`;
+    return `<div class="foot"><button class="link" id="reabrir">${label}</button></div>`;
+  }
+
+  function viewPedido() {
+    const id = state.pedidoId; const p = state.pedidos[id];
+    if (!p) { state.view = "home"; return viewHome(); }
+    let html = `<div class="section"><button class="back" id="volver">← Pedidos</button>
+      <div class="ohead"><h2>${esc(titulo(p))}</h2><span class="pill ${p.estado}">${ESTADO[p.estado]}</span></div>`;
+    if (p.estado === "en_proceso") {
+      html += `<nav class="tabs" role="tablist"><button role="tab" data-tab="elegir" aria-selected="${state.tab === "elegir"}">Elegir lo mío</button><button role="tab" data-tab="resumen" aria-selected="${state.tab === "resumen"}">Pedido de todos</button></nav>`;
+      html += state.tab === "elegir" ? viewElegir(id, p) : viewResumen(id, p);
+    } else if (p.estado === "listo_para_pedir") html += viewListo(id, p);
+    else if (p.estado === "pendiente_pago") html += viewPendiente(id, p);
+    else html += `<div class="banner">${esc(NAME[p.pagador] || "")} recibió todos los pagos. Pedido cerrado.</div>` + ticket(id, p);
+    return html + `</div>`;
+  }
+
+  function viewConfig() {
+    const c = state.config; const ro = state.readOnly ? "disabled" : "";
+    return `<form class="section" id="configForm">
+      <button type="button" class="back" id="volver">← Pedidos</button>
+      <h2>Casa de comidas</h2>
+      <label class="field">Nombre<input type="text" id="cfg-restaurante" value="${esc(c.restaurante)}" ${ro}></label>
+      <label class="field">WhatsApp<input type="tel" id="cfg-telefono" value="${esc(c.telefono)}" placeholder="Ej. 54 9 11 2345 6789" ${ro}></label>
+      <p class="hint">Con código de país y sin el 15. En Argentina: 54 9 + característica + número.</p>
+      <h2>Entrega</h2>
+      <div class="row2">
+        <label class="field">Modo<select id="cfg-entrega" ${ro}><option value="envio" ${c.entrega !== "retiro" ? "selected" : ""}>Envío a domicilio</option><option value="retiro" ${c.entrega === "retiro" ? "selected" : ""}>Retiramos en el local</option></select></label>
+        <label class="field">A nombre de<input type="text" id="cfg-aNombre" value="${esc(c.aNombre)}" ${ro}></label>
+      </div>
+      <label class="field">Dirección<input type="text" id="cfg-direccion" value="${esc(c.direccion)}" placeholder="Calle, número, piso" ${ro}></label>
+      <h2>Menú</h2>
+      <p class="hint">Un plato por línea con su precio. Las líneas que empiezan con <code>#</code> son categorías. Los pedidos ya confirmados guardan los precios de ese día.</p>
+      <textarea id="cfg-menu" rows="14" spellcheck="false" ${ro}>${esc(c.menuTexto)}</textarea>
+      ${state.readOnly ? "" : `<button class="btn primary" type="submit">Guardar</button>`}
+    </form>`;
+  }
+
+  function render() {
+    const me = NAME[state.me];
+    $("start").hidden = !!me; $("app").hidden = !me;
+    $("pick").innerHTML = PEOPLE.map((x) => `<button data-me="${x.id}">${esc(x.nombre)}</button>`).join("");
+    if (!me) return;
+    $("whoName").textContent = me;
+    $("title").textContent = state.config.restaurante || "ViandApp";
+    const view = $("view");
+    if (state.view === "config" && view.contains(document.activeElement) && document.activeElement !== document.body) return;
+    view.innerHTML = state.view === "pedido" ? viewPedido() : state.view === "config" ? viewConfig() : viewHome();
+  }
+
+  // ---------- Acciones ----------
+  async function flushItems(id) {
+    const k = id + "|" + state.me;
+    clearTimeout(timers[k]);
+    const sent = state.overrides[k]; if (!sent) return true;
+    const ok = await safe(pedidoRef(id).update({ items: { [state.me]: sent } }));
+    if (state.overrides[k] === sent) delete state.overrides[k];
+    return ok;
+  }
+
+  function setQty(key, delta) {
+    const id = state.pedidoId; const p = state.pedidos[id];
+    if (!p || p.estado !== "en_proceso" || state.readOnly || respuesta(p, state.me)) return;
+    const k = id + "|" + state.me;
+    const items = { ...((p.items && p.items[state.me]) || {}), ...(state.overrides[k] || {}) };
+    items[key] = Math.max(0, (items[key] || 0) + delta);
+    state.overrides[k] = items; render();
+    clearTimeout(timers[k]);
+    timers[k] = setTimeout(() => flushItems(id), 500);
+  }
+
+  // Cuando los tres respondieron, el pedido pasa a Listo para pedir con los precios congelados.
+  const avanzando = new Set();
+  async function quizasAvanzar(id) {
+    const p = state.pedidos[id];
+    if (!p || p.estado !== "en_proceso" || !todosRespondieron(p) || avanzando.has(id) || !state.me) return;
+    avanzando.add(id);
+    const det = detalle(id); const snap = {};
+    for (const x of conPedido(det)) snap[x.id] = det[x.id];
+    await safe(pedidoRef(id).update({ estado: "listo_para_pedir", detalle: snap, total: totalDe(det), listoEn: new Date().toISOString() }));
+    avanzando.delete(id);
+  }
+
+  async function responder(valor) {
+    const id = state.pedidoId; const p = state.pedidos[id];
+    if (!p || p.estado !== "en_proceso") return;
+    if (valor === "nada") {
+      const k = id + "|" + state.me; clearTimeout(timers[k]); delete state.overrides[k];
+      const zero = {}; for (const key in ((p.items || {})[state.me] || {})) zero[key] = 0;
+      await safe(pedidoRef(id).update({ items: { [state.me]: zero }, respuestas: { [state.me]: "nada" } }));
+    } else {
+      if (!(await flushItems(id))) return;
+      await safe(pedidoRef(id).update({ respuestas: { [state.me]: "listo" } }));
+    }
+    toast(valor === "nada" ? "Anotado: esta vez no pedís" : "¡Listo! Tu pedido quedó confirmado");
+    state.tab = "resumen"; render(); window.scrollTo({ top: 0 });
+  }
+
+  async function nuevoPedido() {
+    if (activo()) { toast("Ya hay un pedido abierto"); return; }
+    const now = new Date();
+    const id = now.toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const ok = await safe(pedidoRef(id).set({ creado: now.toISOString(), creadoPor: state.me, estado: "en_proceso", items: {}, respuestas: {} }));
+    if (ok) { state.pedidoId = id; state.view = "pedido"; state.tab = "elegir"; render(); }
+  }
+
+  document.addEventListener("click", async (e) => {
+    const t = e.target.closest("button, a"); if (!t) return;
+    const id = state.pedidoId;
+    if (t.dataset.me) { state.me = t.dataset.me; state.view = "home"; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.id === "changeWho") { state.me = null; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.id === "volver") { state.view = "home"; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.id === "goConfig") { state.view = "config"; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.dataset.open) {
+      state.pedidoId = t.dataset.open; state.view = "pedido"; state.confirm = null; state.pagador = null;
+      const p = state.pedidos[state.pedidoId];
+      state.tab = p && respuesta(p, state.me) ? "resumen" : "elegir";
+      render(); window.scrollTo({ top: 0 }); return;
+    }
+    if (t.dataset.tab) { state.tab = t.dataset.tab; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.dataset.inc) return setQty(t.dataset.inc, 1);
+    if (t.dataset.dec) return setQty(t.dataset.dec, -1);
+    if (t.id === "nuevo") return nuevoPedido();
+    if (t.id === "terminar") return responder("listo");
+    if (t.id === "nada") return responder("nada");
+    if (t.id === "desconfirmar") { await safe(pedidoRef(id).update({ respuestas: { [state.me]: null } })); state.tab = "elegir"; return; }
+    if (t.id === "pagado") {
+      const pagador = $("pagador").value; const p = state.pedidos[id];
+      const nadieDebe = deben({ pagador }, p.detalle || {}).length === 0;
+      await safe(pedidoRef(id).update({ estado: nadieDebe ? "cerrado" : "pendiente_pago", pagador, pedidoEn: new Date().toISOString(), avisos: {}, ...(nadieDebe ? { cerradoEn: new Date().toISOString() } : {}) }));
+      toast(nadieDebe ? "Pedido cerrado" : `Listo. Ahora cada uno le transfiere a ${NAME[pagador]}`);
+      return;
+    }
+    if (t.id === "avise") { const p = state.pedidos[id]; await safe(pedidoRef(id).update({ avisos: { [state.me]: !(p.avisos || {})[state.me] } })); return; }
+    if (t.id === "cerrar") { state.confirm = "cerrar"; render(); return; }
+    if (t.id === "cerrarSi") { state.confirm = null; await safe(pedidoRef(id).update({ estado: "cerrado", cerradoEn: new Date().toISOString() })); toast("Pedido cerrado"); return; }
+    if (t.id === "copy") {
+      try { await navigator.clipboard.writeText(mensaje(id)); toast("Mensaje copiado"); }
+      catch (err) { const r = document.createRange(); r.selectNodeContents($("msg")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Seleccioné el texto: copialo desde el celular"); }
+      return;
+    }
+    if (t.id === "descartar") { state.confirm = "descartar"; render(); return; }
+    if (t.id === "reabrir") { state.confirm = "reabrir"; render(); return; }
+    if (t.id === "cancelar") { state.confirm = null; render(); return; }
+    if (t.id === "descartarSi") { state.confirm = null; state.view = "home"; await safe(pedidoRef(id).delete()); render(); toast("Pedido descartado"); return; }
+    if (t.id === "reabrirSi") {
+      state.confirm = null; state.tab = "elegir";
+      await safe(pedidoRef(id).update({ estado: "en_proceso", respuestas: { clara: null, matu: null, santi: null } }));
+      return;
+    }
+  });
+
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "porPersona") { state.porPersona = e.target.checked; ls.set("viandapp.porPersona", state.porPersona ? "1" : "0"); render(); }
+    if (e.target.id === "pagador") state.pagador = e.target.value;
+  });
+
+  document.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (e.target.id !== "configForm") return;
+    const v = (k) => $("cfg-" + k).value;
+    state.config = { ...state.config, restaurante: v("restaurante").trim(), telefono: v("telefono").trim(), entrega: v("entrega"), aNombre: v("aNombre").trim(), direccion: v("direccion").trim(), menuTexto: v("menu") };
+    document.activeElement && document.activeElement.blur();
+    if (await safe(db.doc("config/main").set({ ...state.config, actualizado: new Date().toISOString() }))) toast(`Guardado · ${menu().length} platos`);
+    render();
+  });
+
+  let toastTimer;
+  function toast(msg) { const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), 2600); }
+  function showBanner(msg, kind) { const b = $("banner"); b.textContent = msg; b.dataset.kind = kind || ""; b.hidden = false; }
+
+  // ---------- Firebase ----------
+  function firebaseDb(cfg) {
+    firebase.initializeApp(cfg);
+    const fs = firebase.firestore();
+    const wrap = (d) => ({ id: d.id, exists: d.exists, data: () => d.data() });
+    return {
+      doc(path) {
+        const r = fs.doc(path);
+        return {
+          set: (v) => r.set(v),
+          update: (v) => r.set(v, { merge: true }),
+          delete: () => r.delete(),
+          onSnapshot: (cb, err) => r.onSnapshot((d) => cb(wrap(d)), err),
+        };
+      },
+      collection(name) {
+        const r = fs.collection(name);
+        return { onSnapshot: (cb, err) => r.onSnapshot((q) => cb({ docs: q.docs.map(wrap) }), err) };
+      },
+    };
+  }
+
+  // ---------- Arranque ----------
+  render();
+  const cfg = window.FIREBASE_CONFIG;
+  if (window.firebase && cfg && cfg.apiKey && !cfg.apiKey.startsWith("PEGAR")) {
+    db = firebaseDb(cfg);
+  } else {
+    db = localDb();
+    showBanner("Modo de prueba: falta configurar Firebase, así que los pedidos quedan solo en este navegador.");
+  }
+  start();
+})();
+</script>
+</body>
+</html>
