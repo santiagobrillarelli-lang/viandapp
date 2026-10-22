@@ -633,7 +633,8 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   }
 
   function avisoTexto(id, para) {
-    return `Hola ${NAME[para]}! ${NAME[state.me]} armó un pedido nuevo a ${local()}. Elegí lo tuyo (o marcá que no querés nada) acá: ${linkPedido(id)}`;
+    const saludo = para ? `Hola ${NAME[para]}!` : "Hola!";
+    return `${saludo} ${NAME[state.me]} armó un pedido nuevo a ${local()}. ${para ? "Elegí lo tuyo (o marcá que no querés nada)" : "Elijan lo suyo (o marquen que no quieren nada)"} acá: ${linkPedido(id)}`;
   }
 
   function avisoBlock(id, p) {
@@ -642,8 +643,9 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     const avisados = p.avisados || {};
     if (otros.every((x) => avisados[x.id])) return "";
     return `<div class="confirm" style="border-color:var(--info)"><b>Avisale al resto que hay pedido nuevo</b>
-      <span class="hint">Se abre WhatsApp con el mensaje y el link al pedido; solo tenés que tocar enviar.</span>
-      <div class="row2">${otros.map((x) => `<a class="btn ${avisados[x.id] ? "" : "primary"}" data-avisar="${x.id}" href="https://wa.me/${x.tel}?text=${encodeURIComponent(avisoTexto(id, x.id))}" target="_blank" rel="noopener">${avisados[x.id] ? `Avisado a ${esc(x.nombre)} ✓` : `Avisar a ${esc(x.nombre)}`}</a>`).join("")}</div></div>`;
+      <a class="btn primary" data-avisar="todos" href="https://wa.me/?text=${encodeURIComponent(avisoTexto(id, null))}" target="_blank" rel="noopener">Avisar a todos por WhatsApp</a>
+      <span class="hint">Se abre WhatsApp con el mensaje y el link al pedido: elegí el grupo de la familia (o los chats de ${esc(otros.map((x) => x.nombre).join(" y "))}) y enviá.</span>
+      <span class="hint">O de a uno: ${otros.map((x) => `<a data-avisar="${x.id}" href="https://wa.me/${x.tel}?text=${encodeURIComponent(avisoTexto(id, x.id))}" target="_blank" rel="noopener">${avisados[x.id] ? `${esc(x.nombre)} ✓` : esc(x.nombre)}</a>`).join(" · ")}</span></div>`;
   }
 
   async function nuevoPedido() {
@@ -658,7 +660,11 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     const t = e.target.closest("button, a"); if (!t) return;
     const id = state.pedidoId;
     if (t.dataset.me) { state.me = t.dataset.me; state.view = "home"; if (!abrirDesdeLink()) { render(); window.scrollTo({ top: 0 }); } return; }
-    if (t.dataset.avisar) { safe(pedidoRef(id).update({ avisados: { [t.dataset.avisar]: true } })); return; }
+    if (t.dataset.avisar) {
+      const quienes = t.dataset.avisar === "todos" ? PEOPLE.filter((x) => x.id !== state.me).map((x) => x.id) : [t.dataset.avisar];
+      safe(pedidoRef(id).update({ avisados: Object.fromEntries(quienes.map((q) => [q, true])) }));
+      return;
+    }
     if (t.id === "changeWho") { state.me = null; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
     if (t.id === "volver") { state.view = "home"; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
     if (t.id === "goConfig") { state.view = "config"; render(); window.scrollTo({ top: 0 }); return; }
