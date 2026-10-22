@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="ViandApp">
 <meta name="robots" content="noindex">
 <title>ViandApp</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -422,6 +425,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
       }
       html += `</div>`;
     }
+    html += installBlock();
     html += `<div class="foot"><button class="link" id="goConfig">Menú y datos de ${esc(local())}</button></div></div>`;
     return html;
   }
@@ -678,6 +682,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     if (t.dataset.inc) return setQty(t.dataset.inc, 1);
     if (t.dataset.dec) return setQty(t.dataset.dec, -1);
     if (t.id === "nuevo") return nuevoPedido();
+    if (t.id === "instalar" && installEvent) { installEvent.prompt(); const r = await installEvent.userChoice; installEvent = null; if (r.outcome !== "accepted") render(); return; }
     if (t.id === "terminar") return responder("listo");
     if (t.id === "nada") return responder("nada");
     if (t.id === "desconfirmar") { await safe(pedidoRef(id).update({ respuestas: { [state.me]: null } })); state.tab = "elegir"; return; }
@@ -725,6 +730,20 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   let toastTimer;
   function toast(msg) { const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), 2600); }
   function showBanner(msg, kind) { const b = $("banner"); b.textContent = msg; b.dataset.kind = kind || ""; b.hidden = false; }
+
+  // ---------- Instalar en el celular ----------
+  let installEvent = null;
+  const instalada = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; render(); });
+  window.addEventListener("appinstalled", () => { installEvent = null; toast("¡App instalada!"); render(); });
+  function installBlock() {
+    if (instalada()) return "";
+    if (installEvent) return `<button class="btn" id="instalar">📲 Instalar la app en este celular</button>`;
+    if (esIOS) return `<p class="hint" style="text-align:center">Para instalarla en el iPhone: tocá <b>Compartir</b> en Safari y después <b>Agregar a inicio</b>.</p>`;
+    return "";
+  }
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
   // ---------- Firebase ----------
   function firebaseDb(cfg) {
