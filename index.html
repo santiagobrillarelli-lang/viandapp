@@ -257,7 +257,6 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     view: "home",             // home | pedido | config
     pedidoId: null,
     tab: "elegir",            // elegir | resumen
-    porPersona: ls.get("viandapp.porPersona") === "1",
     confirm: null,            // "descartar" | "reabrir"
     pagador: null,
     readOnly: false,
@@ -373,9 +372,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     const det = detalle(id); const ls_ = lineas(det);
     if (!ls_.length) return "";
     let t = "Hola! Quería hacer un pedido:\n\n";
-    if (state.porPersona) {
-      for (const { id: pid, nombre } of conPedido(det)) t += `*${nombre}*\n` + det[pid].map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
-    } else t += ls_.map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
+    t += ls_.map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
     return t + "¡Gracias!";
   }
   function waLink(id) {
@@ -478,8 +475,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     let html = ticket(id, p);
     if (!conPedido(det).length) return html + `<div class="banner">Nadie pidió nada esta vez.</div>`;
     const num = (state.config.telefono || "").replace(/\D/g, "");
-    html += `<label class="toggle"><input type="checkbox" id="porPersona" ${state.porPersona ? "checked" : ""}> Separar el mensaje por persona</label>
-      <h3>Mensaje para ${esc(local())}</h3><div class="preview" id="msg">${esc(mensaje(id))}</div>
+    html += `<h3>Mensaje para ${esc(local())}</h3><div class="preview" id="msg">${esc(mensaje(id))}</div>
       <div class="actions">
         <a class="btn primary" href="${esc(waLink(id))}" target="_blank" rel="noopener">1. Enviar por WhatsApp</a>
         <button class="btn" id="copy">Copiar mensaje</button>
@@ -706,7 +702,6 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   });
 
   document.addEventListener("change", (e) => {
-    if (e.target.id === "porPersona") { state.porPersona = e.target.checked; ls.set("viandapp.porPersona", state.porPersona ? "1" : "0"); render(); }
     if (e.target.id === "pagador") state.pagador = e.target.value;
   });
 
