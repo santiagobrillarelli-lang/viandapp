@@ -172,7 +172,11 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
 .order .amt { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
 .order .meta { grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); }
 .order .meta b { color: var(--warn); font-weight: 600; }
-.back { align-self: flex-start; border: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 4px 0; }
+.back {
+  align-self: flex-start; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 5;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 600;
+  padding: 8px 16px; border-radius: 999px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
 .ohead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pays { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .pay { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); }
@@ -526,7 +530,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   function viewPedido() {
     const id = state.pedidoId; const p = state.pedidos[id];
     if (!p) { state.view = "home"; return viewHome(); }
-    let html = `<div class="section"><button class="back" id="volver">← Pedidos</button>
+    let html = `<div class="section"><button class="back" id="volver">← Volver a pedidos</button>
       <div class="ohead"><h2>${esc(titulo(p))}</h2><span class="pill ${p.estado}">${ESTADO[p.estado]}</span></div>`;
     if (p.estado === "en_proceso") {
       html += avisoBlock(id, p);
@@ -542,7 +546,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   function viewConfig() {
     const c = state.config; const ro = state.readOnly ? "disabled" : "";
     return `<form class="section" id="configForm">
-      <button type="button" class="back" id="volver">← Pedidos</button>
+      <button type="button" class="back" id="volver">← Volver a pedidos</button>
       <h2>Casa de comidas</h2>
       <label class="field">Nombre<input type="text" id="cfg-restaurante" value="${esc(c.restaurante)}" ${ro}></label>
       <label class="field">WhatsApp<input type="tel" id="cfg-telefono" value="${esc(c.telefono)}" placeholder="Ej. 54 9 11 2345 6789" ${ro}></label>
@@ -620,7 +624,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     const id = abrirAlEntrar; abrirAlEntrar = null;
     try { history.replaceState(null, "", location.pathname); } catch (e) {}
     const p = state.pedidos[id]; if (!p) return false;
-    state.pedidoId = id; state.view = "pedido"; state.confirm = null; state.pagador = null;
+    state.pedidoId = id; state.view = "pedido"; state.confirm = null; state.pagador = null; entrar();
     state.tab = respuesta(p, state.me) ? "resumen" : "elegir";
     render(); window.scrollTo({ top: 0 }); return true;
   }
@@ -641,12 +645,18 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
       <span class="hint">O de a uno: ${otros.map((x) => `<a data-avisar="${x.id}" href="https://wa.me/${x.tel}?text=${encodeURIComponent(avisoTexto(id, x.id))}" target="_blank" rel="noopener">${avisados[x.id] ? `${esc(x.nombre)} ✓` : esc(x.nombre)}</a>`).join(" · ")}</span></div>`;
   }
 
+  // Al entrar a un pedido o a Menú y datos se agrega un paso al historial,
+  // así el botón "atrás" del celular vuelve a la lista en vez de salir de la app.
+  function entrar() { if (!(history.state && history.state.dentro)) { try { history.pushState({ dentro: true }, ""); } catch (e) {} } }
+  function irAInicio() { state.view = "home"; state.confirm = null; render(); window.scrollTo({ top: 0 }); }
+  window.addEventListener("popstate", () => { if (state.view !== "home") irAInicio(); });
+
   async function nuevoPedido() {
     if (activo()) { toast("Ya hay un pedido abierto"); return; }
     const now = new Date();
     const id = now.toISOString().slice(0, 19).replace(/[:T]/g, "-");
     const ok = await safe(pedidoRef(id).set({ creado: now.toISOString(), creadoPor: state.me, estado: "en_proceso", items: {}, respuestas: {} }));
-    if (ok) { state.pedidoId = id; state.view = "pedido"; state.tab = "elegir"; render(); }
+    if (ok) { state.pedidoId = id; state.view = "pedido"; state.tab = "elegir"; entrar(); render(); }
   }
 
   document.addEventListener("click", async (e) => {
@@ -659,10 +669,10 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
       return;
     }
     if (t.id === "changeWho") { state.me = null; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
-    if (t.id === "volver") { state.view = "home"; state.confirm = null; render(); window.scrollTo({ top: 0 }); return; }
-    if (t.id === "goConfig") { state.view = "config"; render(); window.scrollTo({ top: 0 }); return; }
+    if (t.id === "volver") { if (history.state && history.state.dentro) history.back(); else irAInicio(); return; }
+    if (t.id === "goConfig") { state.view = "config"; entrar(); render(); window.scrollTo({ top: 0 }); return; }
     if (t.dataset.open) {
-      state.pedidoId = t.dataset.open; state.view = "pedido"; state.confirm = null; state.pagador = null;
+      state.pedidoId = t.dataset.open; state.view = "pedido"; state.confirm = null; state.pagador = null; entrar();
       const p = state.pedidos[state.pedidoId];
       state.tab = p && respuesta(p, state.me) ? "resumen" : "elegir";
       render(); window.scrollTo({ top: 0 }); return;
@@ -693,7 +703,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     if (t.id === "descartar") { state.confirm = "descartar"; render(); const c = $("confirmDescartar"); if (c) c.scrollIntoView({ block: "center" }); return; }
     if (t.id === "reabrir") { state.confirm = "reabrir"; render(); return; }
     if (t.id === "cancelar") { state.confirm = null; render(); return; }
-    if (t.id === "descartarSi") { state.confirm = null; state.view = "home"; await safe(pedidoRef(id).delete()); render(); toast("Pedido eliminado"); return; }
+    if (t.id === "descartarSi") { state.confirm = null; await safe(pedidoRef(id).delete()); if (history.state && history.state.dentro) history.back(); else irAInicio(); toast("Pedido eliminado"); return; }
     if (t.id === "reabrirSi") {
       state.confirm = null; state.tab = "elegir";
       await safe(pedidoRef(id).update({ estado: "en_proceso", respuestas: { clara: null, matu: null, santi: null } }));
