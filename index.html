@@ -584,7 +584,9 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     $("whoName").textContent = me;
     $("title").textContent = state.config.restaurante || "ViandApp";
     const view = $("view");
-    if (state.view === "config" && view.contains(document.activeElement) && document.activeElement !== document.body) return;
+    // No pisar el formulario de Menú y datos mientras se está escribiendo en él.
+    const form = $("configForm");
+    if (state.view === "config" && form && form.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
     view.innerHTML = state.view === "pedido" ? viewPedido() : state.view === "config" ? viewConfig() : viewHome();
   }
 
