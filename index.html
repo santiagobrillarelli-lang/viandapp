@@ -370,16 +370,13 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
   const local = () => state.config.restaurante || "la casa de comidas";
 
   function mensaje(id) {
-    const c = state.config; const det = detalle(id); const ls_ = lineas(det);
+    const det = detalle(id); const ls_ = lineas(det);
     if (!ls_.length) return "";
     let t = "Hola! Quería hacer un pedido:\n\n";
     if (state.porPersona) {
       for (const { id: pid, nombre } of conPedido(det)) t += `*${nombre}*\n` + det[pid].map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
     } else t += ls_.map((l) => `• ${l.qty} x ${l.name}`).join("\n") + "\n\n";
-    if (c.entrega === "retiro") t += "Pasamos a retirar.";
-    else t += c.direccion ? `Para enviar a: ${c.direccion}` : "Es para envío.";
-    if (c.aNombre) t += `\nA nombre de: ${c.aNombre}`;
-    return t + "\n\n¡Gracias!";
+    return t + "¡Gracias!";
   }
   function waLink(id) {
     const num = (state.config.telefono || "").replace(/\D/g, "");
@@ -554,12 +551,6 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
       <label class="field">Nombre<input type="text" id="cfg-restaurante" value="${esc(c.restaurante)}" ${ro}></label>
       <label class="field">WhatsApp<input type="tel" id="cfg-telefono" value="${esc(c.telefono)}" placeholder="Ej. 54 9 11 2345 6789" ${ro}></label>
       <p class="hint">Con código de país y sin el 15. En Argentina: 54 9 + característica + número.</p>
-      <h2>Entrega</h2>
-      <div class="row2">
-        <label class="field">Modo<select id="cfg-entrega" ${ro}><option value="envio" ${c.entrega !== "retiro" ? "selected" : ""}>Envío a domicilio</option><option value="retiro" ${c.entrega === "retiro" ? "selected" : ""}>Retiramos en el local</option></select></label>
-        <label class="field">A nombre de<input type="text" id="cfg-aNombre" value="${esc(c.aNombre)}" ${ro}></label>
-      </div>
-      <label class="field">Dirección<input type="text" id="cfg-direccion" value="${esc(c.direccion)}" placeholder="Calle, número, piso" ${ro}></label>
       <h2>Menú</h2>
       <p class="hint">Un plato por línea con su precio. Las líneas que empiezan con <code>#</code> son categorías. Los pedidos ya confirmados guardan los precios de ese día.</p>
       <textarea id="cfg-menu" rows="14" spellcheck="false" ${ro}>${esc(c.menuTexto)}</textarea>
@@ -723,7 +714,7 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     e.preventDefault();
     if (e.target.id !== "configForm") return;
     const v = (k) => $("cfg-" + k).value;
-    state.config = { ...state.config, restaurante: v("restaurante").trim(), telefono: v("telefono").trim(), entrega: v("entrega"), aNombre: v("aNombre").trim(), direccion: v("direccion").trim(), menuTexto: v("menu") };
+    state.config = { ...state.config, restaurante: v("restaurante").trim(), telefono: v("telefono").trim(), menuTexto: v("menu") };
     document.activeElement && document.activeElement.blur();
     if (await safe(db.doc("config/main").set({ ...state.config, actualizado: new Date().toISOString() }))) toast(`Guardado · ${menu().length} platos`);
     render();
