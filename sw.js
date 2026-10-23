@@ -1,5 +1,5 @@
 // Guarda la app para que abra rápido y sin conexión. Los datos (Firebase) siempre van por la red.
-const CACHE = "viandapp-v5";
+const CACHE = "viandapp-v6";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

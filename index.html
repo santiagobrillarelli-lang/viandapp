@@ -497,9 +497,27 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     return html;
   }
 
+  // Aviso por WhatsApp de cuánto le tiene que transferir cada uno a quien pagó.
+  function cobroTexto(id, p, det, para) {
+    const pag = NAME[p.pagador];
+    if (para) return `Hola ${NAME[para]}! ${pag} ya le pagó el pedido a ${local()}. Tenés que transferirle ${money(subtotal(det[para]))}. Detalle: ${linkPedido(id)}`;
+    const lineas_ = deben(p, det).map((x) => `• ${x.nombre}: ${money(subtotal(det[x.id]))}`).join("\n");
+    return `Hola! ${pag} ya le pagó el pedido a ${local()}. Tienen que transferirle:\n${lineas_}\n\nDetalle: ${linkPedido(id)}`;
+  }
+  function cobroBlock(id, p, det) {
+    const lista_ = deben(p, det);
+    if (p.pagador !== state.me || !lista_.length) return "";
+    const av = p.avisadosPago || {};
+    if (lista_.every((x) => av[x.id])) return "";
+    return `<div class="confirm" style="border-color:var(--info)"><b>Avisales cuánto te tienen que transferir</b>
+      <a class="btn primary" data-cobrar="todos" href="https://wa.me/?text=${encodeURIComponent(cobroTexto(id, p, det, null))}" target="_blank" rel="noopener">Avisar a todos por WhatsApp</a>
+      <span class="hint">Se abre WhatsApp con el mensaje y lo que debe cada uno: elegí el grupo de la familia y enviá.</span>
+      <span class="hint">O de a uno: ${lista_.map((x) => `<a data-cobrar="${x.id}" href="https://wa.me/${PEOPLE.find((q) => q.id === x.id).tel}?text=${encodeURIComponent(cobroTexto(id, p, det, x.id))}" target="_blank" rel="noopener">${esc(x.nombre)}${av[x.id] ? " ✓" : ""}</a>`).join(" · ")}</span></div>`;
+  }
+
   function viewPendiente(id, p) {
     const det = detalle(id); const lista_ = deben(p, det); const avisos = p.avisos || {};
-    let html = "";
+    let html = state.readOnly ? "" : cobroBlock(id, p, det);
     const yo = lista_.find((x) => x.id === state.me);
     if (yo) html += `<div class="confirm" style="border-color:var(--warn)"><b style="font-size:1.15rem">Transferile ${money(subtotal(det[state.me]))} a ${esc(NAME[p.pagador])}</b>
         <span class="hint">${esc(NAME[p.pagador])} pagó todo el pedido a ${esc(local())}.</span>
@@ -663,6 +681,12 @@ code { font-family: var(--font-mono); font-size: 0.85em; }
     const t = e.target.closest("button, a"); if (!t) return;
     const id = state.pedidoId;
     if (t.dataset.me) { state.me = t.dataset.me; state.view = "home"; if (!abrirDesdeLink()) { render(); window.scrollTo({ top: 0 }); } return; }
+    if (t.dataset.cobrar) {
+      const p = state.pedidos[id];
+      const quienes = t.dataset.cobrar === "todos" ? deben(p, p.detalle || {}).map((x) => x.id) : [t.dataset.cobrar];
+      safe(pedidoRef(id).update({ avisadosPago: Object.fromEntries(quienes.map((q) => [q, true])) }));
+      return;
+    }
     if (t.dataset.avisar) {
       const quienes = t.dataset.avisar === "todos" ? PEOPLE.filter((x) => x.id !== state.me).map((x) => x.id) : [t.dataset.avisar];
       safe(pedidoRef(id).update({ avisados: Object.fromEntries(quienes.map((q) => [q, true])) }));
